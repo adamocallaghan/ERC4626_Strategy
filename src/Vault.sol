@@ -14,12 +14,10 @@ contract Vault is ERC4626, Ownable {
     // STORAGE VARS
     address strategy;
 
-    constructor(ERC20 _asset, string memory _name, string memory _symbol, address _strategy)
+    constructor(ERC20 _asset, string memory _name, string memory _symbol)
         ERC4626(_asset, _name, _symbol)
         Ownable(msg.sender)
-    {
-        strategy = _strategy;
-    }
+    {}
 
     function beforeWithdraw(uint256 assets, uint256 shares) internal override {
         // get assets from strategy contract
@@ -33,5 +31,9 @@ contract Vault is ERC4626, Ownable {
 
     function totalAssets() public view override returns (uint256) {
         return asset.balanceOf(strategy) + asset.balanceOf(address(this));
+    }
+
+    function setStrategy(address _strategy) public onlyOwner {
+        strategy = _strategy;
     }
 }
