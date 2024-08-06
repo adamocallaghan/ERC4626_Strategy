@@ -5,6 +5,11 @@ import {ERC4626} from "lib/solmate/src/tokens/ERC4626.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
+interface Strategy {
+    function deposit(uint256 _assets) external;
+    function withdraw(uint256 _assets) external;
+}
+
 contract Vault is ERC4626, Ownable {
     // STORAGE VARS
     address strategy;
@@ -22,8 +27,8 @@ contract Vault is ERC4626, Ownable {
     }
 
     function afterDeposit(uint256 assets, uint256 shares) internal override {
-        // pass assets to strategy contract
-        asset.transfer(strategy, assets);
+        // call deposit on strategy contract
+        Strategy(strategy).deposit(assets);
     }
 
     function totalAssets() public view override returns (uint256) {
