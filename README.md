@@ -1,66 +1,18 @@
-## Foundry
+## Superhack 2024
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+# Ironclad ERC4626 Vault & Strategy (Superform)
 
-Foundry consists of:
+**An ERC4626 vault & strategy for Superhack 2024**
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+This strategy:
 
-## Documentation
+- Accepts WETH deposits (Mode network) via an ERC4626 Vault
+- Passes collateral to a Strategy contract; which
+- Mints iUSD on Ironclad; and
+- Deposits iUSD into the Ironclad Stability Pool
 
-https://book.getfoundry.sh/
+## Links
 
-## Usage
-
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+https://ethglobal.com/events/superhack2024/prizes/superform
+https://app.ironclad.finance/positions
+https://app.ironclad.finance/stakeV2
