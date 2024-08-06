@@ -1,6 +1,6 @@
-## Superhack 2024
+# Superhack 2024
 
-# Ironclad ERC4626 Vault & Strategy (Superform)
+## Ironclad ERC4626 Vault & Strategy (Superform)
 
 **An ERC4626 vault & strategy for Superhack 2024**
 
@@ -11,8 +11,8 @@ This strategy:
 - Mints iUSD on Ironclad; and
 - Deposits iUSD into the Ironclad Stability Pool
 
-## Links
+Links:
 
-https://ethglobal.com/events/superhack2024/prizes/superform
-https://app.ironclad.finance/positions
-https://app.ironclad.finance/stakeV2
+- https://ethglobal.com/events/superhack2024/prizes/superform
+- https://app.ironclad.finance/positions
+- https://app.ironclad.finance/stakeV2
