@@ -14,10 +14,21 @@ interface Ironclad {
         address _upperHint,
         address _lowerHint
     ) external;
+    function adjustTrove(
+        address _collateral,
+        uint256 _maxFeePercentage,
+        uint256 _collTopUp,
+        uint256 _collWithdrawal,
+        uint256 _LUSDChange,
+        bool _isDebtIncrease,
+        address _upperHint,
+        address _lowerHint
+    ) external;
 }
 
 interface IroncladSP {
     function provideToSP(uint256 _amount) external;
+    function withdrawFromSP(uint256 _amount) external;
 }
 
 interface RedstoneOracle {
@@ -56,7 +67,7 @@ contract Strategy {
     }
 
     // Deposit WETH & Mint iUSD on Ironclad...
-    function _depositWethAndMintIusd(uint256 _assets) internal returns (uint256 availableToBorrowInUsd) {
+    function _depositWethAndMintIusd(uint256 _assets) internal returns (uint256) {
         uint256 ethPrice = REDSTONE_PROXY.getValueForDataFeedUnsafe(REDSTONE_ETH_FEED_ID);
 
         // ensure that there is a 150% collateralisation ratio on minted iUSD
@@ -73,5 +84,30 @@ contract Strategy {
     // Deposit iUSD into Ironclad stability pool...
     function _depositIusdToStabilityPool(uint256 _iUsdBorrowAmount) internal {
         IRONCLAD_SP.provideToSP(_iUsdBorrowAmount);
+    }
+
+    // Withdraw entrypoint...
+    function withdraw(uint256 _assets) public {
+        uint256 amountInIUsdToRepay = _calculateIUsdAmountAndRemoveFromStabilityPool(_assets);
+        _repayDebtAndWithdrawCollateral(_assets, amountInIUsdToRepay);
+    }
+
+    // Calculate iUSD to withdraw from Stability Pool and withdraw it...
+    function _calculateIUsdAmountAndRemoveFromStabilityPool(uint256 _assets) internal returns (uint256) {
+        uint256 ethPrice = REDSTONE_PROXY.getValueForDataFeedUnsafe(REDSTONE_ETH_FEED_ID);
+
+        uint256 withdrawalCollateralInUsd = _assets * (ethPrice * 1e10);
+        uint256 amountInIUsdToWithdraw = ((withdrawalCollateralInUsd / 3) * 2) / 1e18;
+
+        IRONCLAD_SP.withdrawFromSP(amountInIUsdToWithdraw);
+
+        return amountInIUsdToWithdraw;
+    }
+
+    // Repay iUSD debt and withdraw collateral...
+    function _repayDebtAndWithdrawCollateral(uint256 _assets, uint256 _iUsdRepayAmount) internal {
+        IRONCLAD_BORROW.adjustTrove(
+            address(icETH), 5000000000000000, 0, _assets, _iUsdRepayAmount, false, address(0), address(this)
+        );
     }
 }

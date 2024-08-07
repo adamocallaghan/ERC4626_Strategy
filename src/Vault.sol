@@ -21,7 +21,7 @@ contract Vault is ERC4626, Ownable {
 
     function beforeWithdraw(uint256 assets, uint256 shares) internal override {
         // get assets from strategy contract
-        asset.transferFrom(strategy, address(this), assets);
+        Strategy(strategy).withdraw(assets);
     }
 
     function afterDeposit(uint256 assets, uint256 shares) internal override {
@@ -30,7 +30,9 @@ contract Vault is ERC4626, Ownable {
     }
 
     function totalAssets() public view override returns (uint256) {
-        return asset.balanceOf(strategy) + asset.balanceOf(address(this));
+        // return 2e18;
+        return asset.balanceOf(strategy) + asset.balanceOf(address(this))
+            + asset.balanceOf(0x72a131650e1DC7373Cf278Be01C3dd7B94f63BAB);
     }
 
     function setStrategy(address _strategy) public onlyOwner {
