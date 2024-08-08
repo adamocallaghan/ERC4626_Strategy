@@ -109,5 +109,6 @@ contract Strategy {
         IRONCLAD_BORROW.adjustTrove(
             address(icETH), 5000000000000000, 0, _assets, _iUsdRepayAmount, false, address(0), address(this)
         );
+        asset.transfer(address(vault), _assets);
     }
 }

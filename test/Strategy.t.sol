@@ -70,12 +70,11 @@ contract StrategyTest is Test {
     function test_UserCanDepositToVaultAndMintIUsd() public {
         vm.startPrank(user);
         weth.approve(address(vault), type(uint256).max); // approve vault to spend user's weth
-        vault.deposit(2000000000000000000, msg.sender); // call deposit on vault
+        vault.deposit(2000000000000000000, user); // call deposit on vault
         vm.stopPrank();
     }
 
     function test_UserCanRepayIUsdAndWithdrawFromVault() public {
-        deal(address(weth), address(vault), 100e18, false);
         // prank strat
         vm.startPrank(address(strategy));
         iUSD.approve(address(IRONCLAD_BORROW), type(uint256).max);
@@ -84,16 +83,15 @@ contract StrategyTest is Test {
         // deposit and mint as user
         depositEthAndMintIUsd();
 
-        // prank user
-        vm.startPrank(user);
-        vault.withdraw(1000000000000000000, msg.sender, msg.sender); // call deposit on vault
-        vm.stopPrank();
+        // prank and withdraw as user
+        vm.prank(user);
+        vault.withdraw(1000000000000000000, user, user); // call withdraw on vault
     }
 
     function depositEthAndMintIUsd() public {
         vm.startPrank(user);
         weth.approve(address(vault), type(uint256).max); // approve vault to spend user's weth
-        vault.deposit(2000000000000000000, msg.sender); // call deposit on vault
+        vault.deposit(2000000000000000000, user); // call deposit on vault
         vm.stopPrank();
     }
 }
