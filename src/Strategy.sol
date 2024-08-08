@@ -55,9 +55,9 @@ contract Strategy {
         vault = _vault;
     }
 
-    // ==================
-    // STRATEGY FUNCTIONS
-    // ==================
+    // ***************
+    // *** DEPOSIT ***
+    // ***************
 
     // Deposit entrypoint...
     function deposit(uint256 _assets) public {
@@ -86,6 +86,10 @@ contract Strategy {
         IRONCLAD_SP.provideToSP(_iUsdBorrowAmount);
     }
 
+    // ****************
+    // *** WITHDRAW ***
+    // ****************
+
     // Withdraw entrypoint...
     function withdraw(uint256 _assets) public {
         uint256 amountInIUsdToRepay = _calculateIUsdAmountAndRemoveFromStabilityPool(_assets);
@@ -110,5 +114,13 @@ contract Strategy {
             address(icETH), 5000000000000000, 0, _assets, _iUsdRepayAmount, false, address(0), address(this)
         );
         asset.transfer(address(vault), _assets);
+    }
+
+    // ***************
+    // *** HARVEST ***
+    // ***************
+
+    function _harvest() internal {
+        // harvest to be called when troves are adjusted
     }
 }

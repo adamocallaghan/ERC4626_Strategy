@@ -10,9 +10,15 @@ interface Strategy {
     function withdraw(uint256 _assets) external;
 }
 
+interface TroveManager {
+    function getTroveColl(address _borrower, address _collateral) external view returns (uint256);
+}
+
 contract Vault is ERC4626, Ownable {
     // STORAGE VARS
     address strategy;
+
+    ERC20 icETH = ERC20(0xd2b93816A671A7952DFd2E347519846DD8bF5af2);
 
     constructor(ERC20 _asset, string memory _name, string memory _symbol)
         ERC4626(_asset, _name, _symbol)
@@ -30,9 +36,10 @@ contract Vault is ERC4626, Ownable {
     }
 
     function totalAssets() public view override returns (uint256) {
-        return 1e18;
-        // return asset.balanceOf(strategy) + asset.balanceOf(address(this))
-        //     + asset.balanceOf(0x72a131650e1DC7373Cf278Be01C3dd7B94f63BAB);
+        // return 1e18;
+        TroveManager TROVE_MANAGER = TroveManager(0xB8E7f7a8763F12f1a4Cfeb87efF1e1886A68152a);
+        uint256 troveCollateral = TROVE_MANAGER.getTroveColl(address(strategy), address(icETH)); // borrower & collateral
+        return troveCollateral;
     }
 
     function setStrategy(address _strategy) public onlyOwner {
