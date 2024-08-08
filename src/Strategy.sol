@@ -39,7 +39,9 @@ interface IroncladRewarder {
 }
 
 interface IroncladOptionToken {
-    function exercise(uint256 amount, address recipient, address option, bytes calldata params) external;
+    function exercise(uint256 amount, address recipient, address option, bytes calldata params)
+        external
+        returns (uint256, address, uint256, uint256);
 }
 
 interface RedstoneOracle {
@@ -60,11 +62,13 @@ contract Strategy {
     ERC20 asset;
     ERC20 icETH = ERC20(0xd2b93816A671A7952DFd2E347519846DD8bF5af2);
     address vault;
+    address icl = 0x95177295A394f2b9B04545FFf58f4aF0673E839d;
 
     Ironclad IRONCLAD_BORROW = Ironclad(0x72a131650e1DC7373Cf278Be01C3dd7B94f63BAB);
     IroncladSP IRONCLAD_SP = IroncladSP(0x193aDcE432205b3FF34B764230E81430c9E3A7B5);
     IroncladRewarder IRONCLAD_REWARDER = IroncladRewarder(0xC043BA54F34C9fb3a0B45d22e2Ef1f171272Bc9D);
     IroncladOptionToken IRONCLAD_OPTION_TOKEN = IroncladOptionToken(0x3B6eA0fA8A487c90007ce120a83920fd52b06f6D);
+
     address IRONCLAD_OPTION_TOKEN_EXERCISE_ADDRESS = 0xcb727532e24dFe22E74D3892b998f5e915676Da8;
 
     address[] rewarderAssetList = [
@@ -174,19 +178,23 @@ contract Strategy {
     // *** HARVEST ***
     // ***************
 
+    function harvest() public {
+        _harvest();
+    }
+
     function _harvest() internal {
         // claim Ironclad oICL rewards to this contract
         (address[] memory rewardTokens, uint256[] memory claimedAmounts) =
             IRONCLAD_REWARDER.claimAllRewardsToSelf(rewarderAssetList);
 
         // get the amount of oICL we can exercise
-        uint256 optionTokenExerciseAmount;
+        uint256 optionTokenExerciseAmount = 100e18;
 
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            if (rewardTokens[i] == address(IRONCLAD_OPTION_TOKEN)) {
-                optionTokenExerciseAmount = claimedAmounts[i];
-            }
-        }
+        // for (uint256 i = 0; i < rewardTokens.length; i++) {
+        //     if (rewardTokens[i] == address(IRONCLAD_OPTION_TOKEN)) {
+        //         optionTokenExerciseAmount = claimedAmounts[i];
+        //     }
+        // }
 
         // construct slippage & deadline params
         DiscountExerciseParams memory params =
@@ -196,23 +204,23 @@ contract Strategy {
         // In tests I will top up the contract with $MODE using deal()
 
         // call exerise on oICL token
-        IRONCLAD_OPTION_TOKEN.exercise(
+        (uint256 paymentAmount, address data0, uint256 data1, uint256 data2) = IRONCLAD_OPTION_TOKEN.exercise(
             optionTokenExerciseAmount, address(this), IRONCLAD_OPTION_TOKEN_EXERCISE_ADDRESS, abi.encode(params)
         );
 
         // swap ICL tokens into WETH on Velodrom
         // weth = 0x4200000000000000000000000000000000000006
         // icl = 0x95177295a394f2b9b04545fff58f4af0673e839d
-        IRouter.route[] memory wethToIclRoutes;
-        IRouter.route memory wethToIcl;
-        wethToIcl.from = address(asset);
-        wethToIcl.to = 0x95177295A394f2b9B04545FFf58f4aF0673E839d;
-        wethToIcl.stable = false;
-        wethToIclRoutes[0] = wethToIcl;
+        // IRouter.route[] memory wethToIclRoutes;
+        // IRouter.route memory wethToIcl;
+        // wethToIcl.from = address(asset);
+        // wethToIcl.to = icl;
+        // wethToIcl.stable = false;
+        // wethToIclRoutes[0] = wethToIcl;
 
-        VELODROME_ROUTER.swapExactTokensForTokens(
-            optionTokenExerciseAmount, 0, wethToIclRoutes, address(this), type(uint256).max
-        );
+        // VELODROME_ROUTER.swapExactTokensForTokens(
+        //     optionTokenExerciseAmount, 0, wethToIclRoutes, address(this), type(uint256).max
+        // );
 
         // redeposit WETH into Ironclad, mint iUSD, and deposit into the SP again
     }
