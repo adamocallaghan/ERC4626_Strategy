@@ -50,6 +50,8 @@ contract Strategy {
     RedstoneOracle REDSTONE_PROXY = RedstoneOracle(0x0e2d75D760b12ac1F2aE84CD2FF9fD13Cb632942);
     bytes32 REDSTONE_ETH_FEED_ID = 0x4554480000000000000000000000000000000000000000000000000000000000;
 
+    uint256 timesDepositCalled = 0;
+
     constructor(ERC20 _asset, address _vault) {
         asset = _asset;
         vault = _vault;
@@ -74,9 +76,17 @@ contract Strategy {
         uint256 totalCollateralInUsd = _assets * (ethPrice * 1e10); // ethPrice returned in 1e8, needs rounding up by 1e10
         uint256 availableToBorrowInUsd = ((totalCollateralInUsd / 3) * 2) / 1e18; // total needs to be rounded down for Ironclad
 
-        IRONCLAD_BORROW.openTrove(
-            address(icETH), _assets, 5000000000000000, availableToBorrowInUsd, address(0), address(this)
-        );
+        if (timesDepositCalled == 0) {
+            IRONCLAD_BORROW.openTrove(
+                address(icETH), _assets, 5000000000000000, availableToBorrowInUsd, address(0), address(this)
+            );
+        } else {
+            IRONCLAD_BORROW.adjustTrove(
+                address(icETH), 5000000000000000, _assets, 0, availableToBorrowInUsd, true, address(0), address(this)
+            );
+        }
+
+        timesDepositCalled++;
 
         return availableToBorrowInUsd;
     }

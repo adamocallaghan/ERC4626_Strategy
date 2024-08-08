@@ -65,6 +65,11 @@ contract StrategyTest is Test {
         vm.startPrank(address(strategy));
         weth.approve(address(IRONCLAD_BORROW), type(uint256).max);
         vm.stopPrank();
+
+        // approve Ironclad to spend strat's iUsd
+        vm.startPrank(address(strategy));
+        iUSD.approve(address(IRONCLAD_BORROW), type(uint256).max);
+        vm.stopPrank();
     }
 
     function test_UserCanDepositToVaultAndMintIUsd() public {
@@ -75,23 +80,33 @@ contract StrategyTest is Test {
     }
 
     function test_UserCanRepayIUsdAndWithdrawFromVault() public {
-        // prank strat
-        vm.startPrank(address(strategy));
-        iUSD.approve(address(IRONCLAD_BORROW), type(uint256).max);
-        vm.stopPrank();
-
         // deposit and mint as user
-        depositEthAndMintIUsd();
+        address _user = makeAddr("user");
+        depositEthAndMintIUsd(_user);
 
         // prank and withdraw as user
         vm.prank(user);
-        vault.withdraw(1000000000000000000, user, user); // call withdraw on vault
+        vault.withdraw(1000000000000000000, _user, _user); // call withdraw on vault
     }
 
-    function depositEthAndMintIUsd() public {
-        vm.startPrank(user);
+    function test_multipleUsersCanDepositToVaultAndMintIUsd() public {
+        address _user1 = makeAddr("user1");
+        address _user2 = makeAddr("user2");
+        address _user3 = makeAddr("user3");
+
+        deal(address(weth), _user1, 100e18, false);
+        deal(address(weth), _user2, 100e18, false);
+        deal(address(weth), _user3, 100e18, false);
+
+        depositEthAndMintIUsd(_user1);
+        depositEthAndMintIUsd(_user2);
+        depositEthAndMintIUsd(_user3);
+    }
+
+    function depositEthAndMintIUsd(address _user) public {
+        vm.startPrank(_user);
         weth.approve(address(vault), type(uint256).max); // approve vault to spend user's weth
-        vault.deposit(2000000000000000000, user); // call deposit on vault
+        vault.deposit(2000000000000000000, _user); // call deposit on vault
         vm.stopPrank();
     }
 }
