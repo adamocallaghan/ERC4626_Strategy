@@ -57,21 +57,23 @@ struct DiscountExerciseParams {
     uint256 deadline;
 }
 
-contract Strategy {
-    // STORAGE VARS
+contract Strategy is Ownable {
+    address vault;
+
+    // tokens
     ERC20 asset;
     ERC20 icETH = ERC20(0xd2b93816A671A7952DFd2E347519846DD8bF5af2);
-    address vault;
-    address icl = 0x95177295A394f2b9B04545FFf58f4aF0673E839d;
+    ERC20 icl = ERC20(0x95177295A394f2b9B04545FFf58f4aF0673E839d);
     ERC20 ModeToken = ERC20(0xDfc7C877a950e49D2610114102175A06C2e3167a);
+    IroncladOptionToken IRONCLAD_OPTION_TOKEN = IroncladOptionToken(0x3B6eA0fA8A487c90007ce120a83920fd52b06f6D);
 
+    // Ironclad contracts
     Ironclad IRONCLAD_BORROW = Ironclad(0x72a131650e1DC7373Cf278Be01C3dd7B94f63BAB);
     IroncladSP IRONCLAD_SP = IroncladSP(0x193aDcE432205b3FF34B764230E81430c9E3A7B5);
     IroncladRewarder IRONCLAD_REWARDER = IroncladRewarder(0xC043BA54F34C9fb3a0B45d22e2Ef1f171272Bc9D);
-    IroncladOptionToken IRONCLAD_OPTION_TOKEN = IroncladOptionToken(0x3B6eA0fA8A487c90007ce120a83920fd52b06f6D);
 
+    // Ironclad param vars
     address IRONCLAD_OPTION_TOKEN_EXERCISE_ADDRESS = 0xcb727532e24dFe22E74D3892b998f5e915676Da8;
-
     address[] rewarderAssetList = [
         0xe7334Ad0e325139329E747cF2Fc24538dD564987,
         0xe5415Fa763489C813694D7A79d133F0A7363310C,
@@ -93,15 +95,17 @@ contract Strategy {
         0xe57Bf381Fc0a7C5e6c2A3A38Cc09de37b29CC4C3
     ];
 
+    // Redstone
     RedstoneOracle REDSTONE = RedstoneOracle(0x7C1DAAE7BB0688C9bfE3A918A4224041c7177256);
     RedstoneOracle REDSTONE_PROXY = RedstoneOracle(0x0e2d75D760b12ac1F2aE84CD2FF9fD13Cb632942);
     bytes32 REDSTONE_ETH_FEED_ID = 0x4554480000000000000000000000000000000000000000000000000000000000;
 
+    // Velodrome
     IRouter VELODROME_ROUTER = IRouter(0x3a63171DD9BebF4D07BC782FECC7eb0b890C2A45);
 
     uint256 timesDepositCalled = 0;
 
-    constructor(ERC20 _asset, address _vault) {
+    constructor(ERC20 _asset, address _vault) Ownable(msg.sender) {
         asset = _asset;
         vault = _vault;
     }
@@ -153,6 +157,7 @@ contract Strategy {
     function withdraw(uint256 _assets) public {
         uint256 amountInIUsdToRepay = _calculateIUsdAmountAndRemoveFromStabilityPool(_assets);
         _repayDebtAndWithdrawCollateral(_assets, amountInIUsdToRepay);
+        _harvest();
     }
 
     // Calculate iUSD to withdraw from Stability Pool and withdraw it...
@@ -179,17 +184,21 @@ contract Strategy {
     // *** HARVEST ***
     // ***************
 
-    function harvest() public {
+    function harvest() external onlyOwner {
         _harvest();
     }
 
     function _harvest() internal {
-        uint256 optionTokenExerciseAmount = _claimAllRewards();
+        uint256 optionTokenExerciseAmount = _claimAllRewards(); // claim rewards
 
-        _exerciseOptionsTokens(optionTokenExerciseAmount);
+        _exerciseOptionsTokens(optionTokenExerciseAmount); // exercise options tokens to get liquid ICL
 
-        _swapIclToWethOnVelodrome(optionTokenExerciseAmount);
-        // redeposit WETH into Ironclad, mint iUSD, and deposit into the SP again
+        uint256 wethAfterHarvestAndSwap = _swapIclToWethOnVelodrome(optionTokenExerciseAmount); // swap ICL to WETH
+
+        // redeposit WETH into Ironclad and mint iUSD...
+        uint256 iUsdBorrowAmount = _depositWethAndMintIusd(wethAfterHarvestAndSwap);
+        //  ...and deposit into the SP again to compound rewards
+        _depositIusdToStabilityPool(iUsdBorrowAmount);
     }
 
     function _claimAllRewards() internal returns (uint256) {
@@ -198,7 +207,6 @@ contract Strategy {
             IRONCLAD_REWARDER.claimAllRewardsToSelf(rewarderAssetList);
 
         // get the amount of oICL we can exercise
-        // uint256 optionTokenExerciseAmount = 100e18;
         uint256 optionTokenExerciseAmount;
 
         for (uint256 i = 0; i < rewardTokens.length; i++) {
@@ -213,16 +221,29 @@ contract Strategy {
     function _exerciseOptionsTokens(uint256 optionTokenExerciseAmount) internal {
         // construct slippage & deadline params
         DiscountExerciseParams memory params =
-            DiscountExerciseParams({maxPaymentAmount: type(uint256).max, deadline: type(uint256).max}); // @todo maxPaymentAmount to be calc'd
+            DiscountExerciseParams({maxPaymentAmount: type(uint256).max, deadline: type(uint256).max});
 
         // call exerise on oICL token
-        IRONCLAD_OPTION_TOKEN.exercise(0, address(this), IRONCLAD_OPTION_TOKEN_EXERCISE_ADDRESS, abi.encode(params));
+        IRONCLAD_OPTION_TOKEN.exercise(
+            optionTokenExerciseAmount, address(this), IRONCLAD_OPTION_TOKEN_EXERCISE_ADDRESS, abi.encode(params)
+        );
     }
 
-    function _swapIclToWethOnVelodrome(uint256 iclTokenAmount) internal {
+    function _swapIclToWethOnVelodrome(uint256 iclTokenAmount) internal returns (uint256) {
+        // route: $ICL -> $Mode
         IRouter.route[] memory routes = new IRouter.route[](1);
         routes[0] = IRouter.route(address(icl), address(ModeToken), false);
+        // swap ICL to Mode
+        uint256[] memory amounts =
+            VELODROME_ROUTER.swapExactTokensForTokens(10000e18, 0, routes, address(this), type(uint256).max);
 
-        VELODROME_ROUTER.swapExactTokensForTokens(100e18, 10e18, routes, address(this), type(uint256).max);
+        // route: $Mode to $WETH
+        IRouter.route[] memory routes2 = new IRouter.route[](1);
+        routes2[0] = IRouter.route(address(ModeToken), address(asset), false);
+        // swap Mode to WETH
+        uint256[] memory amounts2 =
+            VELODROME_ROUTER.swapExactTokensForTokens(amounts[0], 0, routes2, address(this), type(uint256).max);
+
+        return amounts2[1];
     }
 }

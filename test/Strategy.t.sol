@@ -87,6 +87,12 @@ contract StrategyTest is Test {
     }
 
     function test_Withdraw_HappyPath() public {
+        deal(address(icl), address(strategy), 100000e18, true);
+        vm.startPrank(address(strategy));
+        ERC20(address(ModeToken)).approve(address(VELODROME_ROUTER), type(uint256).max);
+        ERC20(address(icl)).approve(address(VELODROME_ROUTER), type(uint256).max);
+        vm.stopPrank();
+
         // deposit and mint as user
         address _user = makeAddr("user");
         depositEthAndMintIUsd(_user);
@@ -110,16 +116,10 @@ contract StrategyTest is Test {
         depositEthAndMintIUsd(_user3);
     }
 
-    function test_harvestRewards() public {
-        deal(address(oICL), address(strategy), 1000e18, true);
-        deal(address(ModeToken), address(strategy), 100000e18, true);
+    function test_HarvestRewards() public {
         deal(address(icl), address(strategy), 100000e18, true);
 
         vm.startPrank(address(strategy));
-        ERC20(address(oICL)).approve(oICLExerciseContract, type(uint256).max);
-        ERC20(address(oICL)).approve(oICLImplementationContract, type(uint256).max);
-        ERC20(address(ModeToken)).approve(oICLExerciseContract, type(uint256).max);
-        ERC20(address(ModeToken)).approve(oICLImplementationContract, type(uint256).max);
         ERC20(address(ModeToken)).approve(address(VELODROME_ROUTER), type(uint256).max);
         ERC20(address(icl)).approve(address(VELODROME_ROUTER), type(uint256).max);
         vm.stopPrank();

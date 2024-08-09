@@ -15,10 +15,10 @@ interface TroveManager {
 }
 
 contract Vault is ERC4626, Ownable {
-    // STORAGE VARS
+    // Storage vars
     address strategy;
-
     ERC20 icETH = ERC20(0xd2b93816A671A7952DFd2E347519846DD8bF5af2);
+    TroveManager TROVE_MANAGER = TroveManager(0xB8E7f7a8763F12f1a4Cfeb87efF1e1886A68152a);
 
     constructor(ERC20 _asset, string memory _name, string memory _symbol)
         ERC4626(_asset, _name, _symbol)
@@ -36,8 +36,6 @@ contract Vault is ERC4626, Ownable {
     }
 
     function totalAssets() public view override returns (uint256) {
-        // return 1e18;
-        TroveManager TROVE_MANAGER = TroveManager(0xB8E7f7a8763F12f1a4Cfeb87efF1e1886A68152a);
         uint256 troveCollateral = TROVE_MANAGER.getTroveColl(address(strategy), address(icETH)); // borrower & collateral
         return troveCollateral;
     }
