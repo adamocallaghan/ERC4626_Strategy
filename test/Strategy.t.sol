@@ -73,14 +73,14 @@ contract StrategyTest is Test {
         vm.stopPrank();
     }
 
-    function test_UserCanDepositToVaultAndMintIUsd() public {
+    function test_Deposit_HappyPath() public {
         vm.startPrank(user);
         weth.approve(address(vault), type(uint256).max); // approve vault to spend user's weth
         vault.deposit(2000000000000000000, user); // call deposit on vault
         vm.stopPrank();
     }
 
-    function test_UserCanRepayIUsdAndWithdrawFromVault() public {
+    function test_Withdraw_HappyPath() public {
         // deposit and mint as user
         address _user = makeAddr("user");
         depositEthAndMintIUsd(_user);
@@ -90,7 +90,7 @@ contract StrategyTest is Test {
         vault.withdraw(1000000000000000000, _user, _user); // call withdraw on vault
     }
 
-    function test_multipleUsersCanDepositToVaultAndMintIUsd() public {
+    function test_Deposit_HappyPath_MultipleUsers() public {
         address _user1 = makeAddr("user1");
         address _user2 = makeAddr("user2");
         address _user3 = makeAddr("user3");
@@ -107,6 +107,7 @@ contract StrategyTest is Test {
     function test_harvestRewards() public {
         deal(address(oICL), address(strategy), 1000e18, true);
         deal(address(ModeToken), address(strategy), 100000e18, true);
+        deal(address(0x95177295A394f2b9B04545FFf58f4aF0673E839d), address(strategy), 100000e18, true);
 
         vm.startPrank(address(strategy));
         ERC20(address(oICL)).approve(oICLExerciseContract, type(uint256).max);
@@ -115,6 +116,7 @@ contract StrategyTest is Test {
         ERC20(address(ModeToken)).approve(oICLImplementationContract, type(uint256).max);
         vm.stopPrank();
 
+        // vm.prank(address(strategy));
         strategy.harvest();
     }
 

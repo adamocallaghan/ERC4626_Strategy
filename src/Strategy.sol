@@ -183,45 +183,53 @@ contract Strategy {
     }
 
     function _harvest() internal {
+        uint256 optionTokenExerciseAmount = _claimAllRewards();
+
+        _exerciseOptionsTokens(optionTokenExerciseAmount);
+
+        _swapIclToWethOnVelodrome(optionTokenExerciseAmount);
+        // redeposit WETH into Ironclad, mint iUSD, and deposit into the SP again
+    }
+
+    function _claimAllRewards() internal returns (uint256) {
         // claim Ironclad oICL rewards to this contract
         (address[] memory rewardTokens, uint256[] memory claimedAmounts) =
             IRONCLAD_REWARDER.claimAllRewardsToSelf(rewarderAssetList);
 
         // get the amount of oICL we can exercise
-        uint256 optionTokenExerciseAmount = 100e18;
+        // uint256 optionTokenExerciseAmount = 100e18;
+        uint256 optionTokenExerciseAmount;
 
-        // for (uint256 i = 0; i < rewardTokens.length; i++) {
-        //     if (rewardTokens[i] == address(IRONCLAD_OPTION_TOKEN)) {
-        //         optionTokenExerciseAmount = claimedAmounts[i];
-        //     }
-        // }
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            if (rewardTokens[i] == address(IRONCLAD_OPTION_TOKEN)) {
+                optionTokenExerciseAmount = claimedAmounts[i];
+            }
+        }
 
+        return optionTokenExerciseAmount;
+    }
+
+    function _exerciseOptionsTokens(uint256 optionTokenExerciseAmount) internal {
         // construct slippage & deadline params
         DiscountExerciseParams memory params =
             DiscountExerciseParams({maxPaymentAmount: type(uint256).max, deadline: type(uint256).max}); // @todo maxPaymentAmount to be calc'd
 
-        // We need $MODE tokens to exercise the options... swap? Flash loan?
-        // In tests I will top up the contract with $MODE using deal()
-
         // call exerise on oICL token
-        (uint256 paymentAmount, address data0, uint256 data1, uint256 data2) = IRONCLAD_OPTION_TOKEN.exercise(
-            optionTokenExerciseAmount, address(this), IRONCLAD_OPTION_TOKEN_EXERCISE_ADDRESS, abi.encode(params)
-        );
+        (uint256 paymentAmount, address data0, uint256 data1, uint256 data2) =
+            IRONCLAD_OPTION_TOKEN.exercise(0, address(this), IRONCLAD_OPTION_TOKEN_EXERCISE_ADDRESS, abi.encode(params));
+    }
 
-        // swap ICL tokens into WETH on Velodrom
+    function _swapIclToWethOnVelodrome(uint256 iclTokenAmount) internal {
+        // swap ICL tokens into WETH on Velodrome
         // weth = 0x4200000000000000000000000000000000000006
         // icl = 0x95177295a394f2b9b04545fff58f4af0673e839d
-        // IRouter.route[] memory wethToIclRoutes;
-        // IRouter.route memory wethToIcl;
-        // wethToIcl.from = address(asset);
-        // wethToIcl.to = icl;
-        // wethToIcl.stable = false;
-        // wethToIclRoutes[0] = wethToIcl;
+        IRouter.route[] memory wethToIclRoutes;
+        IRouter.route memory wethToIcl;
+        wethToIcl.from = address(asset);
+        wethToIcl.to = icl;
+        wethToIcl.stable = false;
+        wethToIclRoutes[0] = wethToIcl;
 
-        // VELODROME_ROUTER.swapExactTokensForTokens(
-        //     optionTokenExerciseAmount, 0, wethToIclRoutes, address(this), type(uint256).max
-        // );
-
-        // redeposit WETH into Ironclad, mint iUSD, and deposit into the SP again
+        VELODROME_ROUTER.swapExactTokensForTokens(100e18, 0, wethToIclRoutes, address(this), type(uint256).max);
     }
 }
