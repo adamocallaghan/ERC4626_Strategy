@@ -6,6 +6,7 @@ import {Vault} from "../src/Vault.sol";
 import {Strategy} from "../src/Strategy.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {IRouter} from "../src/interfaces/IRouter.sol";
 
 interface Ironclad {
     function openTrove(
@@ -36,10 +37,15 @@ contract StrategyTest is Test {
     ERC20 iUSD = ERC20(0xA70266C8F8Cf33647dcFEE763961aFf418D9E1E4);
     ERC20 oICL = ERC20(0x3B6eA0fA8A487c90007ce120a83920fd52b06f6D);
     ERC20 ModeToken = ERC20(0xDfc7C877a950e49D2610114102175A06C2e3167a);
+    ERC20 icl = ERC20(0x95177295A394f2b9B04545FFf58f4aF0673E839d);
+
     address oICLImplementationContract = 0x14A291BE13B6b7CeF070C41C65ea9756Ed5A9b58;
     address oICLExerciseContract = 0xcb727532e24dFe22E74D3892b998f5e915676Da8;
+
     Ironclad IRONCLAD_BORROW = Ironclad(0x72a131650e1DC7373Cf278Be01C3dd7B94f63BAB);
     IroncladSP IRONCLAD_SP = IroncladSP(0x193aDcE432205b3FF34B764230E81430c9E3A7B5);
+
+    IRouter VELODROME_ROUTER = IRouter(0x3a63171DD9BebF4D07BC782FECC7eb0b890C2A45);
 
     // user vars
     address user = makeAddr("user");
@@ -107,13 +113,15 @@ contract StrategyTest is Test {
     function test_harvestRewards() public {
         deal(address(oICL), address(strategy), 1000e18, true);
         deal(address(ModeToken), address(strategy), 100000e18, true);
-        deal(address(0x95177295A394f2b9B04545FFf58f4aF0673E839d), address(strategy), 100000e18, true);
+        deal(address(icl), address(strategy), 100000e18, true);
 
         vm.startPrank(address(strategy));
         ERC20(address(oICL)).approve(oICLExerciseContract, type(uint256).max);
         ERC20(address(oICL)).approve(oICLImplementationContract, type(uint256).max);
         ERC20(address(ModeToken)).approve(oICLExerciseContract, type(uint256).max);
         ERC20(address(ModeToken)).approve(oICLImplementationContract, type(uint256).max);
+        ERC20(address(ModeToken)).approve(address(VELODROME_ROUTER), type(uint256).max);
+        ERC20(address(icl)).approve(address(VELODROME_ROUTER), type(uint256).max);
         vm.stopPrank();
 
         // vm.prank(address(strategy));

@@ -63,6 +63,7 @@ contract Strategy {
     ERC20 icETH = ERC20(0xd2b93816A671A7952DFd2E347519846DD8bF5af2);
     address vault;
     address icl = 0x95177295A394f2b9B04545FFf58f4aF0673E839d;
+    ERC20 ModeToken = ERC20(0xDfc7C877a950e49D2610114102175A06C2e3167a);
 
     Ironclad IRONCLAD_BORROW = Ironclad(0x72a131650e1DC7373Cf278Be01C3dd7B94f63BAB);
     IroncladSP IRONCLAD_SP = IroncladSP(0x193aDcE432205b3FF34B764230E81430c9E3A7B5);
@@ -96,7 +97,7 @@ contract Strategy {
     RedstoneOracle REDSTONE_PROXY = RedstoneOracle(0x0e2d75D760b12ac1F2aE84CD2FF9fD13Cb632942);
     bytes32 REDSTONE_ETH_FEED_ID = 0x4554480000000000000000000000000000000000000000000000000000000000;
 
-    IRouter VELODROME_ROUTER = IRouter(0xa062aE8A9c5e11aaA026fc2670B0D65cCc8B2858);
+    IRouter VELODROME_ROUTER = IRouter(0x3a63171DD9BebF4D07BC782FECC7eb0b890C2A45);
 
     uint256 timesDepositCalled = 0;
 
@@ -215,21 +216,13 @@ contract Strategy {
             DiscountExerciseParams({maxPaymentAmount: type(uint256).max, deadline: type(uint256).max}); // @todo maxPaymentAmount to be calc'd
 
         // call exerise on oICL token
-        (uint256 paymentAmount, address data0, uint256 data1, uint256 data2) =
-            IRONCLAD_OPTION_TOKEN.exercise(0, address(this), IRONCLAD_OPTION_TOKEN_EXERCISE_ADDRESS, abi.encode(params));
+        IRONCLAD_OPTION_TOKEN.exercise(0, address(this), IRONCLAD_OPTION_TOKEN_EXERCISE_ADDRESS, abi.encode(params));
     }
 
     function _swapIclToWethOnVelodrome(uint256 iclTokenAmount) internal {
-        // swap ICL tokens into WETH on Velodrome
-        // weth = 0x4200000000000000000000000000000000000006
-        // icl = 0x95177295a394f2b9b04545fff58f4af0673e839d
-        IRouter.route[] memory wethToIclRoutes;
-        IRouter.route memory wethToIcl;
-        wethToIcl.from = address(asset);
-        wethToIcl.to = icl;
-        wethToIcl.stable = false;
-        wethToIclRoutes[0] = wethToIcl;
+        IRouter.route[] memory routes = new IRouter.route[](1);
+        routes[0] = IRouter.route(address(icl), address(ModeToken), false);
 
-        VELODROME_ROUTER.swapExactTokensForTokens(100e18, 0, wethToIclRoutes, address(this), type(uint256).max);
+        VELODROME_ROUTER.swapExactTokensForTokens(100e18, 10e18, routes, address(this), type(uint256).max);
     }
 }
